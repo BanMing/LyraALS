@@ -7,6 +7,7 @@
 UENUM(BlueprintType)
 enum class EGuns : uint8
 {
+	InvalidValue,
 	UnArmed,
 	Pistol,
 	Rifle

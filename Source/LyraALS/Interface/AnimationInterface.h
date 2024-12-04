@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Enums/EGuns.h"
 #include "UObject/Interface.h"
 
 #include "AnimationInterface.generated.h"
@@ -23,9 +24,5 @@ class LYRAALS_API IAnimationInterface
 
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
-	UFUNCTION(BlueprintNativeEvent)
-	void RecieveMaxWalkSpeed(float MaxWalkSpeed);
-
-	UFUNCTION(BlueprintNativeEvent)
-	void RecieveVelocity();
+	virtual void RecieveEquipedGun(EGuns InEquipedGun) = 0;
 };
