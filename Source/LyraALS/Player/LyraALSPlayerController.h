@@ -26,6 +26,7 @@ protected:
 
 protected:
 	void OnSwitchWeaponInput(const FInputActionValue& InputActionValue);
+	void OnLookInput(const FInputActionValue& InputActionValue);
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Input")
@@ -33,6 +34,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputAction> SwitchWeaponAction;
-
+	
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> LookAction;
+	
 	TObjectPtr<ALyraALSCharacterBase> LyraALSCharacterBase;
 };

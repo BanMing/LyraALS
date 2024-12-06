@@ -28,10 +28,18 @@ void ALyraALSPlayerController::SetupInputComponent()
 	Super::SetupInputComponent();
 	UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(InputComponent);
 	EnhancedInputComponent->BindAction(SwitchWeaponAction, ETriggerEvent::Started, this, &ThisClass::OnSwitchWeaponInput);
+	EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ThisClass::OnLookInput);
 }
 
 void ALyraALSPlayerController::OnSwitchWeaponInput(const FInputActionValue& InputActionValue)
 {
 	FVector Value = InputActionValue.Get<FVector>();
 	LyraALSCharacterBase->SwitchGun(static_cast<EGuns>(Value.X));
+}
+
+void ALyraALSPlayerController::OnLookInput(const FInputActionValue& InputActionValue)
+{
+	FVector2D Value = InputActionValue.Get<FVector2D>();
+	AddYawInput(Value.X);
+	AddPitchInput(Value.Y);
 }
