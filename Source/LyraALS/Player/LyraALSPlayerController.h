@@ -6,9 +6,11 @@
 #include "GameFramework/PlayerController.h"
 
 #include "LyraALSPlayerController.generated.h"
+
 class ALyraALSCharacterBase;
 class UInputMappingContext;
 class UInputAction;
+class UCharacterMovementComponent;
 struct FInputActionValue;
 /**
  *
@@ -27,6 +29,9 @@ protected:
 protected:
 	void OnSwitchWeaponInput(const FInputActionValue& InputActionValue);
 	void OnLookInput(const FInputActionValue& InputActionValue);
+	void OnMoveInput(const FInputActionValue& InputActionValue);
+	void OnAimStartInput(const FInputActionValue& InputActionValue);
+	void OnAimEndInput(const FInputActionValue& InputActionValue);
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Input")
@@ -34,9 +39,18 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputAction> SwitchWeaponAction;
-	
+
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputAction> LookAction;
-	
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> MoveAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> AimAction;
+
+private:
 	TObjectPtr<ALyraALSCharacterBase> LyraALSCharacterBase;
+
+	TObjectPtr<UCharacterMovementComponent> CharacterMovementComp;
 };

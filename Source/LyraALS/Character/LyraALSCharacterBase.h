@@ -3,8 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Enums/EGate.h"
 #include "Enums/EGuns.h"
 #include "GameFramework/Character.h"
+#include "Struct/GateSetting.h"
 
 #include "LyraALSCharacterBase.generated.h"
 
@@ -24,10 +26,17 @@ protected:
 
 public:
 	void SwitchGun(EGuns Gun);
+	void SwitchGate(EGate Gate);
 
 protected:
 	UPROPERTY(BlueprintReadOnly)
 	EGuns EquippedGun = EGuns::UnArmed;
+
+	UPROPERTY(BlueprintReadOnly)
+	EGate CurrentGate = EGate::Walking;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TMap<EGate, FGateSetting> GateSettingMap;
 
 	UPROPERTY(BlueprintReadOnly)
 	TScriptInterface<IAnimationInterface> AnimationInterface;

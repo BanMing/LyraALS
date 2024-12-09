@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Enums/EGuns.h"
+#include "Enums/EGate.h"
 #include "UObject/Interface.h"
 
 #include "AnimationInterface.generated.h"
@@ -24,5 +25,6 @@ class LYRAALS_API IAnimationInterface
 
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
-	virtual void RecieveEquipedGun(EGuns InEquipedGun) = 0;
+	virtual void ReceiveEquippedGun(EGuns InEquipedGun) = 0;
+	virtual void ReceiveCurrentGate(EGate InGate) = 0;
 };

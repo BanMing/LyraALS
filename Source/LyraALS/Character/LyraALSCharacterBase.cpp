@@ -2,7 +2,9 @@
 
 #include "Character/LyraALSCharacterBase.h"
 
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Interface/AnimationInterface.h"
+
 ALyraALSCharacterBase::ALyraALSCharacterBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -16,13 +18,15 @@ void ALyraALSCharacterBase::BeginPlay()
 	AnimationInterface.SetObject(GetMesh()->GetAnimInstance());
 	AnimationInterface.SetInterface(Cast<IAnimationInterface>(GetMesh()->GetAnimInstance()));
 
-	GetMesh()->LinkAnimClassLayers(UnArmedAnimLayer);
+	SwitchGun(EGuns::UnArmed);
+	SwitchGate(EGate::Jogging);
 }
 
 void ALyraALSCharacterBase::SwitchGun(EGuns Gun)
 {
 	EquippedGun = Gun;
-	AnimationInterface->RecieveEquipedGun(Gun);
+	AnimationInterface->ReceiveEquippedGun(Gun);
+
 	switch (Gun)
 	{
 		case EGuns::InvalidValue:
@@ -35,5 +39,22 @@ void ALyraALSCharacterBase::SwitchGun(EGuns Gun)
 		case EGuns::Rifle:
 			GetMesh()->LinkAnimClassLayers(RifleAnimLayer);
 			break;
+	}
+}
+
+void ALyraALSCharacterBase::SwitchGate(EGate Gate)
+{
+	CurrentGate = Gate;
+	AnimationInterface->ReceiveCurrentGate(CurrentGate);
+
+	UCharacterMovementComponent* CharacterMovementComp = GetCharacterMovement();
+	if (CharacterMovementComp && GateSettingMap.Contains(CurrentGate))
+	{
+		CharacterMovementComp->MaxWalkSpeed = GateSettingMap[CurrentGate].MaxWalkSpeed;
+		CharacterMovementComp->MaxAcceleration = GateSettingMap[CurrentGate].MaxAcceleration;
+		CharacterMovementComp->BrakingDecelerationWalking = GateSettingMap[CurrentGate].BrakingDeceleration;
+		CharacterMovementComp->BrakingFrictionFactor = GateSettingMap[CurrentGate].BrakingFrictionFactor;
+		CharacterMovementComp->BrakingFriction = GateSettingMap[CurrentGate].BrakingFriction;
+		CharacterMovementComp->bUseSeparateBrakingFriction = GateSettingMap[CurrentGate].bUseSeparateBrakingFriction;
 	}
 }
