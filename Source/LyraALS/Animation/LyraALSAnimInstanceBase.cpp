@@ -1,9 +1,11 @@
-// Copyright BanMing
+﻿// Copyright BanMing
 
 #include "Animation/LyraALSAnimInstanceBase.h"
 
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "KismetAnimationLibrary.h"
 
 void ULyraALSAnimInstanceBase::NativeBeginPlay()
 {
@@ -16,6 +18,7 @@ void ULyraALSAnimInstanceBase::NativeBeginPlay()
 		}
 	}
 }
+
 void ULyraALSAnimInstanceBase::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
@@ -31,6 +34,15 @@ void ULyraALSAnimInstanceBase::NativeThreadSafeUpdateAnimation(float DeltaSecond
 		CharacterVelocity = CharacterMovementComp->Velocity;
 		CharacterVelocity2D.X = CharacterVelocity.X;
 		CharacterVelocity2D.Y = CharacterVelocity.Y;
+		CharacterVelocity2D.Z = 0.f;
+	}
+
+	if (GetOwningActor())
+	{
+		WorldRotation = GetOwningActor()->GetActorRotation();
+		VelocityLocomotionAngle = UKismetAnimationLibrary::CalculateDirection(CharacterVelocity2D, WorldRotation);
+
+		LocomotionDirection = CalculateLocomotionDirection(VelocityLocomotionAngle, -130.f, 130.f, -50.f, 50.f, LocomotionDirection, 20.f);
 	}
 }
 
@@ -42,6 +54,68 @@ void ULyraALSAnimInstanceBase::ReceiveEquippedGun(EGuns InEquippedGun)
 void ULyraALSAnimInstanceBase::ReceiveCurrentGate(EGate InGate)
 {
 	CurrentGate = InGate;
+}
+
+ELocomotionDirection ULyraALSAnimInstanceBase::CalculateLocomotionDirection(
+	float CurVelocityLocomotionAngle, float BackwardMin, float BackwardMax, float ForwardMin, float ForwardMax, ELocomotionDirection CurrentDirection, float DeadZone)
+{
+	// // // // // // // // // // // // // // //
+	// ForwardMin	 Forward	BackwardMax
+	//			 ↖		0°		↗
+	//      	  - - - - - - -
+	//      	  | ↖ | ↑ | ↗ |
+	//      	  - - - - - - -
+	//  -90° Left | ← | o | → | Right 90°
+	//      	  - - - - - - -
+	//      	  | ↙ | ↓ | ↘ |
+	//      	  - - - - - - -
+	//			↙	-180°/180° ↘
+	// BackwardMin	 Backward	BackwardMax
+	// // // // // // // // // // // // // // //
+	
+	// Check dead zone
+	switch (CurrentDirection)
+	{
+		case ELocomotionDirection::Forward:
+			if (CurVelocityLocomotionAngle > ForwardMin - DeadZone && CurVelocityLocomotionAngle < ForwardMax + DeadZone)
+			{
+				return ELocomotionDirection::Forward;
+			}
+			break;
+		case ELocomotionDirection::Backward:
+			if (CurVelocityLocomotionAngle > BackwardMax - DeadZone || CurVelocityLocomotionAngle < BackwardMin + DeadZone)
+			{
+				return ELocomotionDirection::Backward;
+			}
+			break;
+		case ELocomotionDirection::Left:
+			if (CurVelocityLocomotionAngle > BackwardMin - DeadZone && CurVelocityLocomotionAngle < ForwardMin + DeadZone)
+			{
+				return ELocomotionDirection::Left;
+			}
+			break;
+		case ELocomotionDirection::Right:
+			if (CurVelocityLocomotionAngle > ForwardMax - DeadZone && CurVelocityLocomotionAngle < BackwardMax + DeadZone)
+			{
+				return ELocomotionDirection::Right;
+			}
+			break;
+	}
+
+	if (CurVelocityLocomotionAngle > BackwardMax || CurVelocityLocomotionAngle < BackwardMin)
+	{
+		return ELocomotionDirection::Backward;
+	}
+	else if (CurVelocityLocomotionAngle > ForwardMin && CurVelocityLocomotionAngle < ForwardMax)
+	{
+		return ELocomotionDirection::Forward;
+	}
+	else if (CurVelocityLocomotionAngle > 0.f)
+	{
+		return ELocomotionDirection::Right;
+	}
+
+	return ELocomotionDirection::Left;
 }
 
 #if !UE_BUILD_SHIPPING
@@ -56,6 +130,8 @@ void ULyraALSAnimInstanceBase::Debug()
 	{
 		DebugDrawVector("Velocity", CharacterVelocity, FColor::Green);
 		DebugPrintFloat("Velocity", CharacterVelocity2D.Length(), 1232, FColor::Green);
+		DebugPrintFloat("Velocity Locomotion Angle", VelocityLocomotionAngle, 1233, FColor::Yellow);
+		DebugPrintString("Locomotion Direction", StaticEnum<ELocomotionDirection>()->GetNameStringByValue((int32) LocomotionDirection), 1234, FColor::Blue);
 	}
 }
 
@@ -73,7 +149,7 @@ void ULyraALSAnimInstanceBase::DebugDrawVector(FString Name, FVector Value, FCol
 {
 	FVector Start = GetOwningActor()->GetActorLocation() * FVector(1.f, 1.f, 0);
 	FVector Target = Start + Value.GetClampedToMaxSize(100.f) * FVector(1.f, 1.f, 0);
-	UKismetSystemLibrary::DrawDebugArrow(GetWorld(), GetOwningActor()->GetActorLocation(), Target, 5.0, DisplayColor, 5, 3);
-	UKismetSystemLibrary::DrawDebugString(GetWorld(), Target, Name);
+	UKismetSystemLibrary::DrawDebugArrow(GetWorld(), Start, Target, 5.0, DisplayColor, 0, 3);
+	UKismetSystemLibrary::DrawDebugString(GetWorld(), Target, Name, nullptr, DisplayColor);
 }
 #endif	  // UE_BUILD_SHIPPING

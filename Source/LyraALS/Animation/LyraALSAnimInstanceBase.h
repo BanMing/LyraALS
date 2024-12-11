@@ -4,6 +4,7 @@
 
 #include "Animation/AnimInstance.h"
 #include "CoreMinimal.h"
+#include "Enums/ELocomotionDirection.h"
 #include "Interface/AnimationInterface.h"
 #include "Struct/AnimInstDebugOptions.h"
 
@@ -28,6 +29,10 @@ public:
 	virtual void ReceiveEquippedGun(EGuns InEquipedGun) override;
 	virtual void ReceiveCurrentGate(EGate InGate) override;
 
+protected:
+	UFUNCTION(BlueprintCallable, Category = "Locomotion Data", meta = (BlueprintThreadSafe))
+	ELocomotionDirection CalculateLocomotionDirection(float CurVelocityLocomotionAngle, float BackwardMin, float BackwardMax, float ForwardMin, float ForwardMax, ELocomotionDirection CurrentDirection, float DeadZone);
+
 #if !UE_BUILD_SHIPPING
 protected:
 	void Debug();
@@ -37,18 +42,26 @@ protected:
 #endif	  // UE_BUILD_SHIPPING
 
 protected:
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly, Category = "Guns")
 	EGuns EquippedGun;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Movement")
+	UPROPERTY(BlueprintReadOnly, Category = "Gate")
 	EGate CurrentGate;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Movement")
+	UPROPERTY(BlueprintReadOnly, Category = "Velocity Data")
 	FVector CharacterVelocity;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Movement")
+	UPROPERTY(BlueprintReadOnly, Category = "Velocity Data")
+	FVector CharacterVelocity2D;
 
-	FVector2D CharacterVelocity2D;
+	UPROPERTY(BlueprintReadOnly, Category = "Rotation Data")
+	FRotator WorldRotation;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Locomotion Data")
+	float VelocityLocomotionAngle;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Locomotion Data")
+	ELocomotionDirection LocomotionDirection;
 
 	UPROPERTY(EditAnywhere, Category = "Debug")
 	FAnimInstDebugOptions DebugOptions;
