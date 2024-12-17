@@ -26,6 +26,7 @@ void ULyraALSAnimInstanceBase::NativeUpdateAnimation(float DeltaSeconds)
 	Debug();
 #endif	  // UE_BUILD_SHIPPING
 }
+
 void ULyraALSAnimInstanceBase::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeThreadSafeUpdateAnimation(DeltaSeconds);
@@ -40,6 +41,15 @@ void ULyraALSAnimInstanceBase::NativeThreadSafeUpdateAnimation(float DeltaSecond
 	if (GetOwningActor())
 	{
 		WorldRotation = GetOwningActor()->GetActorRotation();
+		LastFrameActorYaw = ActorYaw;
+		ActorYaw = WorldRotation.Yaw;
+		DeltaActorYaw = ActorYaw - LastFrameActorYaw;
+		LeanAngle = FMath::ClampAngle(DeltaActorYaw / (LeanFactor * DeltaSeconds), -90.f, 90.f);
+		if (LocomotionDirection == ELocomotionDirection::Backward)
+		{
+			LeanAngle *= -1.f;
+		}
+
 		VelocityLocomotionAngle = UKismetAnimationLibrary::CalculateDirection(CharacterVelocity2D, WorldRotation);
 
 		LocomotionDirection = CalculateLocomotionDirection(VelocityLocomotionAngle, -130.f, 130.f, -50.f, 50.f, LocomotionDirection, 20.f);
@@ -72,7 +82,7 @@ ELocomotionDirection ULyraALSAnimInstanceBase::CalculateLocomotionDirection(
 	//			↙	-180°/180° ↘
 	// BackwardMin	 Backward	BackwardMax
 	// // // // // // // // // // // // // // //
-	
+
 	// Check dead zone
 	switch (CurrentDirection)
 	{
@@ -132,6 +142,7 @@ void ULyraALSAnimInstanceBase::Debug()
 		DebugPrintFloat("Velocity", CharacterVelocity2D.Length(), 1232, FColor::Green);
 		DebugPrintFloat("Velocity Locomotion Angle", VelocityLocomotionAngle, 1233, FColor::Yellow);
 		DebugPrintString("Locomotion Direction", StaticEnum<ELocomotionDirection>()->GetNameStringByValue((int32) LocomotionDirection), 1234, FColor::Blue);
+		DebugPrintFloat("Locomotion Direction", LeanAngle, 1235, FColor::Red);
 	}
 }
 

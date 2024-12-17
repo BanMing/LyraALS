@@ -40,6 +40,20 @@ protected:
 	void DebugPrintString(FString Name, FString Value, int32 Key, FColor DisplayColor);
 	void DebugDrawVector(FString Name, FVector Value, FColor DisplayColor);
 #endif	  // UE_BUILD_SHIPPING
+public:
+	FORCEINLINE EGate GetCurrentGate() const
+	{
+		return CurrentGate;
+	}
+
+	FORCEINLINE ELocomotionDirection GetLocomotionDirection()
+	{
+		return LocomotionDirection;
+	}
+
+protected:
+	UPROPERTY(EditDefaultsOnly, Category = "Rotation Data")
+	float LeanFactor = 5.f;
 
 protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Guns")
@@ -56,6 +70,18 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Rotation Data")
 	FRotator WorldRotation;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Rotation Data")
+	float ActorYaw;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Rotation Data")
+	float LastFrameActorYaw;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Rotation Data")
+	float DeltaActorYaw;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Rotation Data")
+	float LeanAngle;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Locomotion Data")
 	float VelocityLocomotionAngle;
