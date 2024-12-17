@@ -25,7 +25,7 @@ public:
 
 	// Native Uninitialize override point
 	virtual void NativeUninitializeAnimation() override;
-	
+
 	UFUNCTION(BlueprintPure, meta = (BlueprintThreadSafe))
 	ULyraALSAnimInstanceBase* GetBaseAnimInstance();
 
@@ -36,18 +36,30 @@ protected:
 	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
 	void OnCycleUpdate(const FAnimUpdateContext& UpdateContext, const FAnimNodeReference& Node);
 
+	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
+	void SetupStopAnims(const FAnimUpdateContext& UpdateContext, const FAnimNodeReference& Node);
+
+	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
+	void OnStopUpdate(const FAnimUpdateContext& UpdateContext, const FAnimNodeReference& Node);
+
 private:
 	UAnimSequenceBase* GetSequence(const FDirectionalAnimations& DirectionalAnimations, ELocomotionDirection LocomotionDirection);
 
 protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Idle")
 	TObjectPtr<UAnimSequenceBase> IdleAnim;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Cycle")
 	FDirectionalAnimations WalkDirectionalAnimations;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Cycle")
 	FDirectionalAnimations JogDirectionalAnimations;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stop")
+	FDirectionalAnimations WalkStopAnimations;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stop")
+	FDirectionalAnimations JogStopAnimations;
 
 protected:
 	TObjectPtr<class ULyraALSAnimInstanceBase> BaseAnimInstance;

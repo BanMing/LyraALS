@@ -2,10 +2,12 @@
 
 #include "Animation/LyraALSAnimInstanceBase.h"
 
+#include "AnimCharacterMovementLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "KismetAnimationLibrary.h"
+#include "AnimDistanceMatchingLibrary.h"
 
 void ULyraALSAnimInstanceBase::NativeBeginPlay()
 {
@@ -36,6 +38,13 @@ void ULyraALSAnimInstanceBase::NativeThreadSafeUpdateAnimation(float DeltaSecond
 		CharacterVelocity2D.X = CharacterVelocity.X;
 		CharacterVelocity2D.Y = CharacterVelocity.Y;
 		CharacterVelocity2D.Z = 0.f;
+
+		CurAcceleration = CharacterMovementComp->GetCurrentAcceleration();
+		CurAcceleration2D.X = CurAcceleration.X;
+		CurAcceleration2D.Y = CurAcceleration.Y;
+		CurAcceleration2D.Z = 0.f;
+
+		bIsAccelerating = !CurAcceleration2D.IsNearlyZero();
 	}
 
 	if (GetOwningActor())
@@ -143,6 +152,17 @@ void ULyraALSAnimInstanceBase::Debug()
 		DebugPrintFloat("Velocity Locomotion Angle", VelocityLocomotionAngle, 1233, FColor::Yellow);
 		DebugPrintString("Locomotion Direction", StaticEnum<ELocomotionDirection>()->GetNameStringByValue((int32) LocomotionDirection), 1234, FColor::Blue);
 		DebugPrintFloat("Locomotion Direction", LeanAngle, 1235, FColor::Red);
+
+		DebugDrawVector("Acceleration", CurAcceleration2D, FColor::Blue);
+		DebugPrintFloat("Acceleration", CharacterVelocity2D.Length(), 1236, FColor::Blue);
+	}
+
+	if (DebugOptions.bShowDistanceMatching && CharacterMovementComp)
+	{
+		const FVector StopLocation = UAnimCharacterMovementLibrary::PredictGroundMovementStopLocation(CharacterVelocity2D, CharacterMovementComp->bUseSeparateBrakingFriction, CharacterMovementComp->BrakingFriction,
+			CharacterMovementComp->GroundFriction, CharacterMovementComp->BrakingDecelerationWalking, CharacterMovementComp->BrakingDecelerationWalking);
+		const FVector Center = StopLocation + GetOwningActor()->GetActorLocation();
+		UKismetSystemLibrary::DrawDebugCapsule(GetWorld(), Center, 44.f, 20.f, WorldRotation, FLinearColor::Green, 0.f, 2.f);
 	}
 }
 

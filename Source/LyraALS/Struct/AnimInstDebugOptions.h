@@ -16,4 +16,7 @@ struct FAnimInstDebugOptions
 
 	UPROPERTY(EditAnywhere)
 	bool bShowGateData = false;
+
+	UPROPERTY(EditAnywhere)
+	bool bShowDistanceMatching = false;
 };

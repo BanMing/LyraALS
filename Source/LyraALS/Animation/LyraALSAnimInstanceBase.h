@@ -46,9 +46,24 @@ public:
 		return CurrentGate;
 	}
 
-	FORCEINLINE ELocomotionDirection GetLocomotionDirection()
+	FORCEINLINE ELocomotionDirection GetLocomotionDirection() const
 	{
 		return LocomotionDirection;
+	}
+
+	FORCEINLINE FVector GetCharacterVelocity2D() const
+	{
+		return CharacterVelocity2D;
+	}
+
+	FORCEINLINE FVector GetCurAccelerationData() const
+	{
+		return CurAcceleration;
+	}
+
+	FORCEINLINE UCharacterMovementComponent* GetCharacterMovementComp() const
+	{
+		return CharacterMovementComp;
 	}
 
 protected:
@@ -88,6 +103,15 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Locomotion Data")
 	ELocomotionDirection LocomotionDirection;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Acceleration Data")
+	FVector CurAcceleration;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Acceleration Data")
+	FVector CurAcceleration2D;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Acceleration Data")
+	bool bIsAccelerating;
 
 	UPROPERTY(EditAnywhere, Category = "Debug")
 	FAnimInstDebugOptions DebugOptions;
