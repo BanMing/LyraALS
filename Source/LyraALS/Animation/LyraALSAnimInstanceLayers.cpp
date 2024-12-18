@@ -112,6 +112,39 @@ void ULyraALSAnimInstanceLayers::OnStopUpdate(const FAnimUpdateContext& UpdateCo
 	}
 }
 
+void ULyraALSAnimInstanceLayers::SetupStartAnims(const FAnimUpdateContext& UpdateContext, const FAnimNodeReference& Node)
+{
+	EAnimNodeReferenceConversionResult Result;
+	FSequenceEvaluatorReference SequenceEvaluatorReference = USequenceEvaluatorLibrary::ConvertToSequenceEvaluator(Node, Result);
+	if (Result == EAnimNodeReferenceConversionResult::Failed || GetBaseAnimInstance() == nullptr)
+	{
+		return;
+	}
+
+	UAnimSequenceBase* Sequence;
+	if (GetBaseAnimInstance()->GetCurrentGate() == EGate::Jogging)
+	{
+		Sequence = GetSequence(JogStartAnimations, GetBaseAnimInstance()->GetLocomotionDirection());
+	}
+	else
+	{
+		Sequence = GetSequence(WalkStartAnimations, GetBaseAnimInstance()->GetLocomotionDirection());
+	}
+	USequenceEvaluatorLibrary::SetSequence(SequenceEvaluatorReference, Sequence);
+	USequenceEvaluatorLibrary::SetExplicitTime(SequenceEvaluatorReference, 0.f);
+}
+
+void ULyraALSAnimInstanceLayers::OnStartUpdate(const FAnimUpdateContext& UpdateContext, const FAnimNodeReference& Node)
+{
+	EAnimNodeReferenceConversionResult Result;
+	FSequenceEvaluatorReference SequenceEvaluatorReference = USequenceEvaluatorLibrary::ConvertToSequenceEvaluator(Node, Result);
+	if (Result == EAnimNodeReferenceConversionResult::Failed || GetBaseAnimInstance() == nullptr)
+	{
+		return;
+	}
+	UAnimDistanceMatchingLibrary::AdvanceTimeByDistanceMatching(UpdateContext, SequenceEvaluatorReference, GetBaseAnimInstance()->GetDeltaLocation(), "Distance");
+}
+
 UAnimSequenceBase* ULyraALSAnimInstanceLayers::GetSequence(const FDirectionalAnimations& DirectionalAnimations, ELocomotionDirection LocomotionDirection)
 {
 	switch (LocomotionDirection)

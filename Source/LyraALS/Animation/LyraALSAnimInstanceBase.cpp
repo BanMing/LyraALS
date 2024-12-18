@@ -3,11 +3,11 @@
 #include "Animation/LyraALSAnimInstanceBase.h"
 
 #include "AnimCharacterMovementLibrary.h"
+#include "AnimDistanceMatchingLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "KismetAnimationLibrary.h"
-#include "AnimDistanceMatchingLibrary.h"
 
 void ULyraALSAnimInstanceBase::NativeBeginPlay()
 {
@@ -34,35 +34,18 @@ void ULyraALSAnimInstanceBase::NativeThreadSafeUpdateAnimation(float DeltaSecond
 	Super::NativeThreadSafeUpdateAnimation(DeltaSeconds);
 	if (CharacterMovementComp)
 	{
-		CharacterVelocity = CharacterMovementComp->Velocity;
-		CharacterVelocity2D.X = CharacterVelocity.X;
-		CharacterVelocity2D.Y = CharacterVelocity.Y;
-		CharacterVelocity2D.Z = 0.f;
-
-		CurAcceleration = CharacterMovementComp->GetCurrentAcceleration();
-		CurAcceleration2D.X = CurAcceleration.X;
-		CurAcceleration2D.Y = CurAcceleration.Y;
-		CurAcceleration2D.Z = 0.f;
-
-		bIsAccelerating = !CurAcceleration2D.IsNearlyZero();
+		UpdateVelocityData();
+		UpdateAccelerationData();
 	}
 
 	if (GetOwningActor())
 	{
-		WorldRotation = GetOwningActor()->GetActorRotation();
-		LastFrameActorYaw = ActorYaw;
-		ActorYaw = WorldRotation.Yaw;
-		DeltaActorYaw = ActorYaw - LastFrameActorYaw;
-		LeanAngle = FMath::ClampAngle(DeltaActorYaw / (LeanFactor * DeltaSeconds), -90.f, 90.f);
-		if (LocomotionDirection == ELocomotionDirection::Backward)
-		{
-			LeanAngle *= -1.f;
-		}
-
-		VelocityLocomotionAngle = UKismetAnimationLibrary::CalculateDirection(CharacterVelocity2D, WorldRotation);
-
-		LocomotionDirection = CalculateLocomotionDirection(VelocityLocomotionAngle, -130.f, 130.f, -50.f, 50.f, LocomotionDirection, 20.f);
+		UpdateLocationData();
+		UpdateRotationData(DeltaSeconds);
+		UpdateLocomotionData();
 	}
+
+	UpdateGate();
 }
 
 void ULyraALSAnimInstanceBase::ReceiveEquippedGun(EGuns InEquippedGun)
@@ -72,7 +55,7 @@ void ULyraALSAnimInstanceBase::ReceiveEquippedGun(EGuns InEquippedGun)
 
 void ULyraALSAnimInstanceBase::ReceiveCurrentGate(EGate InGate)
 {
-	CurrentGate = InGate;
+	IncomingGate = InGate;
 }
 
 ELocomotionDirection ULyraALSAnimInstanceBase::CalculateLocomotionDirection(
@@ -137,6 +120,65 @@ ELocomotionDirection ULyraALSAnimInstanceBase::CalculateLocomotionDirection(
 	return ELocomotionDirection::Left;
 }
 
+#pragma region Update Data
+
+void ULyraALSAnimInstanceBase::UpdateGate()
+{
+	LastFrameGate = CurrentGate;
+	CurrentGate = IncomingGate;
+	bIsGateChanged = LastFrameGate != CurrentGate;
+}
+
+void ULyraALSAnimInstanceBase::UpdateLocationData()
+{
+	LastFrameWorldLocation = WorldLocation;
+	WorldLocation = GetOwningActor()->GetActorLocation();
+	DeltaLocation = (WorldLocation - LastFrameWorldLocation).Length();
+}
+
+void ULyraALSAnimInstanceBase::UpdateVelocityData()
+{
+	CharacterVelocity = CharacterMovementComp->Velocity;
+	CharacterVelocity2D.X = CharacterVelocity.X;
+	CharacterVelocity2D.Y = CharacterVelocity.Y;
+	CharacterVelocity2D.Z = 0.f;
+}
+
+void ULyraALSAnimInstanceBase::UpdateAccelerationData()
+{
+	CurAcceleration = CharacterMovementComp->GetCurrentAcceleration();
+	CurAcceleration2D.X = CurAcceleration.X;
+	CurAcceleration2D.Y = CurAcceleration.Y;
+	CurAcceleration2D.Z = 0.f;
+
+	bIsAccelerating = !CurAcceleration2D.IsNearlyZero();
+}
+
+void ULyraALSAnimInstanceBase::UpdateRotationData(float DeltaSeconds)
+{
+	LastFrameActorYaw = ActorYaw;
+
+	WorldRotation = GetOwningActor()->GetActorRotation();
+	ActorYaw = WorldRotation.Yaw;
+	DeltaActorYaw = ActorYaw - LastFrameActorYaw;
+	LeanAngle = FMath::ClampAngle(DeltaActorYaw / (LeanFactor * DeltaSeconds), -90.f, 90.f);
+	if (LocomotionDirection == ELocomotionDirection::Backward)
+	{
+		LeanAngle *= -1.f;
+	}
+}
+
+void ULyraALSAnimInstanceBase::UpdateLocomotionData()
+{
+	LastFrameLocomotionDirection = LocomotionDirection;
+	VelocityLocomotionAngle = UKismetAnimationLibrary::CalculateDirection(CharacterVelocity2D, WorldRotation);
+	LocomotionDirection = CalculateLocomotionDirection(VelocityLocomotionAngle, -130.f, 130.f, -50.f, 50.f, LocomotionDirection, 20.f);
+}
+
+#pragma endregion
+
+#pragma region Debug
+
 #if !UE_BUILD_SHIPPING
 void ULyraALSAnimInstanceBase::Debug()
 {
@@ -151,6 +193,7 @@ void ULyraALSAnimInstanceBase::Debug()
 		DebugPrintFloat("Velocity", CharacterVelocity2D.Length(), 1232, FColor::Green);
 		DebugPrintFloat("Velocity Locomotion Angle", VelocityLocomotionAngle, 1233, FColor::Yellow);
 		DebugPrintString("Locomotion Direction", StaticEnum<ELocomotionDirection>()->GetNameStringByValue((int32) LocomotionDirection), 1234, FColor::Blue);
+		DebugPrintString("Last Frame Locomotion Direction", StaticEnum<ELocomotionDirection>()->GetNameStringByValue((int32) LastFrameLocomotionDirection), 1237, FColor::Blue);
 		DebugPrintFloat("Locomotion Direction", LeanAngle, 1235, FColor::Red);
 
 		DebugDrawVector("Acceleration", CurAcceleration2D, FColor::Blue);
@@ -161,7 +204,7 @@ void ULyraALSAnimInstanceBase::Debug()
 	{
 		const FVector StopLocation = UAnimCharacterMovementLibrary::PredictGroundMovementStopLocation(CharacterVelocity2D, CharacterMovementComp->bUseSeparateBrakingFriction, CharacterMovementComp->BrakingFriction,
 			CharacterMovementComp->GroundFriction, CharacterMovementComp->BrakingDecelerationWalking, CharacterMovementComp->BrakingDecelerationWalking);
-		const FVector Center = StopLocation + GetOwningActor()->GetActorLocation();
+		const FVector Center = StopLocation + WorldLocation;
 		UKismetSystemLibrary::DrawDebugCapsule(GetWorld(), Center, 44.f, 20.f, WorldRotation, FLinearColor::Green, 0.f, 2.f);
 	}
 }
@@ -178,9 +221,11 @@ void ULyraALSAnimInstanceBase::DebugPrintString(FString Name, FString Value, int
 
 void ULyraALSAnimInstanceBase::DebugDrawVector(FString Name, FVector Value, FColor DisplayColor)
 {
-	FVector Start = GetOwningActor()->GetActorLocation() * FVector(1.f, 1.f, 0);
+	FVector Start = WorldLocation * FVector(1.f, 1.f, 0);
 	FVector Target = Start + Value.GetClampedToMaxSize(100.f) * FVector(1.f, 1.f, 0);
 	UKismetSystemLibrary::DrawDebugArrow(GetWorld(), Start, Target, 5.0, DisplayColor, 0, 3);
 	UKismetSystemLibrary::DrawDebugString(GetWorld(), Target, Name, nullptr, DisplayColor);
 }
 #endif	  // UE_BUILD_SHIPPING
+
+#pragma endregion

@@ -33,6 +33,17 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Locomotion Data", meta = (BlueprintThreadSafe))
 	ELocomotionDirection CalculateLocomotionDirection(float CurVelocityLocomotionAngle, float BackwardMin, float BackwardMax, float ForwardMin, float ForwardMax, ELocomotionDirection CurrentDirection, float DeadZone);
 
+#pragma region Update Data
+protected:
+	void UpdateGate();
+	void UpdateLocationData();
+	void UpdateVelocityData();
+	void UpdateAccelerationData();
+	void UpdateRotationData(float DeltaSeconds);
+	void UpdateLocomotionData();
+#pragma endregion
+
+#pragma region Debug
 #if !UE_BUILD_SHIPPING
 protected:
 	void Debug();
@@ -40,6 +51,8 @@ protected:
 	void DebugPrintString(FString Name, FString Value, int32 Key, FColor DisplayColor);
 	void DebugDrawVector(FString Name, FVector Value, FColor DisplayColor);
 #endif	  // UE_BUILD_SHIPPING
+#pragma endregion
+
 public:
 	FORCEINLINE EGate GetCurrentGate() const
 	{
@@ -66,6 +79,11 @@ public:
 		return CharacterMovementComp;
 	}
 
+	FORCEINLINE float GetDeltaLocation() const
+	{
+		return DeltaLocation;
+	}
+
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Rotation Data")
 	float LeanFactor = 5.f;
@@ -76,6 +94,24 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Gate")
 	EGate CurrentGate;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Gate")
+	EGate IncomingGate;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Gate")
+	EGate LastFrameGate;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Gate")
+	bool bIsGateChanged;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Location Data")
+	FVector WorldLocation;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Location Data")
+	FVector LastFrameWorldLocation;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Location Data")
+	float DeltaLocation;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Velocity Data")
 	FVector CharacterVelocity;
@@ -104,6 +140,9 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Locomotion Data")
 	ELocomotionDirection LocomotionDirection;
 
+	UPROPERTY(BlueprintReadOnly, Category = "Locomotion Data")
+	ELocomotionDirection LastFrameLocomotionDirection;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Acceleration Data")
 	FVector CurAcceleration;
 
@@ -117,5 +156,6 @@ protected:
 	FAnimInstDebugOptions DebugOptions;
 
 protected:
+	UPROPERTY(BlueprintReadOnly, Category = "Movement")
 	TObjectPtr<UCharacterMovementComponent> CharacterMovementComp;
 };

@@ -42,6 +42,12 @@ protected:
 	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
 	void OnStopUpdate(const FAnimUpdateContext& UpdateContext, const FAnimNodeReference& Node);
 
+	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
+	void SetupStartAnims(const FAnimUpdateContext& UpdateContext, const FAnimNodeReference& Node);
+
+	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
+	void OnStartUpdate(const FAnimUpdateContext& UpdateContext, const FAnimNodeReference& Node);
+
 private:
 	UAnimSequenceBase* GetSequence(const FDirectionalAnimations& DirectionalAnimations, ELocomotionDirection LocomotionDirection);
 
@@ -60,6 +66,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stop")
 	FDirectionalAnimations JogStopAnimations;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Start")
+	FDirectionalAnimations WalkStartAnimations;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Start")
+	FDirectionalAnimations JogStartAnimations;
 
 protected:
 	TObjectPtr<class ULyraALSAnimInstanceBase> BaseAnimInstance;
