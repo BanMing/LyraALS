@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "{97DAB207-47C5-FE46-A748-9CB4D9F763FD}",
+	"EngineAssociation": "{874CF8D8-4B4E-3801-73AC-8BB52C5C0635}",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -26,16 +26,16 @@
 			"Enabled": true
 		},
 		{
-			"Name": "AnimationLocomotionLibrary",
-			"Enabled": true
-		},
-		{
 			"Name": "VisualStudioTools",
 			"Enabled": true,
 			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/362651520df94e4fa65492dbcba44ae2",
 			"SupportedTargetPlatforms": [
 				"Win64"
 			]
+		},
+		{
+			"Name": "AnimationLocomotionLibrary",
+			"Enabled": true
 		}
 	]
 }
