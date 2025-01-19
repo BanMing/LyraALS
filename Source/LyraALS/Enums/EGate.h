@@ -8,5 +8,6 @@ UENUM(BlueprintType)
 enum class EGate : uint8
 {
 	Walking,
-	Jogging
+	Jogging,
+	Crouching
 };

@@ -32,6 +32,11 @@ protected:
 	void OnMoveInput(const FInputActionValue& InputActionValue);
 	void OnAimStartInput(const FInputActionValue& InputActionValue);
 	void OnAimEndInput(const FInputActionValue& InputActionValue);
+	void OnCrouchInput(const FInputActionValue& InputActionValue);
+	void OnStartJumpInput(const FInputActionValue& InputActionValue);
+	void OnEndJumpInput(const FInputActionValue& InputActionValue);
+	void OnFireInput(const FInputActionValue& InputActionValue);
+	void OnReloadInput(const FInputActionValue& InputActionValue);
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Input")
@@ -48,6 +53,18 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputAction> AimAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> CrouchAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> JumpAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> FireAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> ReloadAction;
 
 private:
 	TObjectPtr<ALyraALSCharacterBase> LyraALSCharacterBase;

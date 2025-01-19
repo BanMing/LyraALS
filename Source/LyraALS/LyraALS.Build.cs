@@ -10,7 +10,7 @@ public class LyraALS : ModuleRules
 
         PublicIncludePaths.Add("LyraALS");
 
-        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "AnimGraphRuntime", "AnimationLocomotionLibraryRuntime" });
+        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "AnimGraphRuntime", "AnimationLocomotionLibraryRuntime", "AnimationModifiers", "AnimationBlueprintLibrary", "AnimationModifierLibrary" });
 
         PrivateDependencyModuleNames.AddRange(new string[] { });
 

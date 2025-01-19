@@ -2,13 +2,32 @@
 
 #include "Character/LyraALSCharacterBase.h"
 
+#include "Camera/CameraComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Components/TimelineComponent.h"
+#include "Engine/DataTable.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "Interface/AnimationInterface.h"
+#include "Struct/GateSetting.h"
 
 ALyraALSCharacterBase::ALyraALSCharacterBase()
 {
-	PrimaryActorTick.bCanEverTick = false;
 	EquippedGun = EGuns::UnArmed;
+
+	Pistol = CreateDefaultSubobject<USkeletalMeshComponent>("Pistol");
+	Pistol->SetupAttachment(GetMesh(), SkeletonSockets.PistolUnEquipped);
+
+	Rifle = CreateDefaultSubobject<USkeletalMeshComponent>("Rifle");
+	Rifle->SetupAttachment(GetMesh(), SkeletonSockets.RifleUnEquipped);
+
+	SpringArm = CreateDefaultSubobject<USpringArmComponent>("SpringArm");
+	SpringArm->SetupAttachment(GetCapsuleComponent());
+
+	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
+	Camera->SetupAttachment(SpringArm);
+
+	CameraAimingTimeline = CreateDefaultSubobject<UTimelineComponent>("CameraAimingTimeline");
 }
 
 void ALyraALSCharacterBase::BeginPlay()
@@ -20,6 +39,18 @@ void ALyraALSCharacterBase::BeginPlay()
 
 	SwitchGun(EGuns::UnArmed);
 	SwitchGate(EGate::Jogging);
+
+	CameraAimingTimeline->SetTimelineLengthMode(ETimelineLengthMode::TL_LastKeyFrame);
+
+	FOnTimelineFloatStatic LerpAimingCameraFunc;
+	LerpAimingCameraFunc.BindLambda([this](float Alpha) { SpringArm->TargetArmLength = FMath::Lerp(500.f, 400.f, Alpha); });
+	CameraAimingTimeline->AddInterpFloat(AimingTimelineCurve, LerpAimingCameraFunc);
+}
+
+void ALyraALSCharacterBase::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	UpdateGroundDistance();
 }
 
 void ALyraALSCharacterBase::SwitchGun(EGuns Gun)
@@ -40,21 +71,175 @@ void ALyraALSCharacterBase::SwitchGun(EGuns Gun)
 			GetMesh()->LinkAnimClassLayers(RifleAnimLayer);
 			break;
 	}
+	ChangeWeapon();
 }
 
 void ALyraALSCharacterBase::SwitchGate(EGate Gate)
 {
+	if (CurrentGate == EGate::Crouching && Gate != EGate::Crouching)
+	{
+		UnCrouch();
+	}
+	if (CurrentGate != EGate::Crouching && Gate == EGate::Crouching)
+	{
+		Crouch();
+	}
+
 	CurrentGate = Gate;
 	AnimationInterface->ReceiveCurrentGate(CurrentGate);
+	FGateSetting* GateSetting = GateSettingDataTable->FindRow<FGateSetting>(GetCurGateName(), "");
 
 	UCharacterMovementComponent* CharacterMovementComp = GetCharacterMovement();
-	if (CharacterMovementComp && GateSettingMap.Contains(CurrentGate))
+	if (CharacterMovementComp && GateSetting)
 	{
-		CharacterMovementComp->MaxWalkSpeed = GateSettingMap[CurrentGate].MaxWalkSpeed;
-		CharacterMovementComp->MaxAcceleration = GateSettingMap[CurrentGate].MaxAcceleration;
-		CharacterMovementComp->BrakingDecelerationWalking = GateSettingMap[CurrentGate].BrakingDeceleration;
-		CharacterMovementComp->BrakingFrictionFactor = GateSettingMap[CurrentGate].BrakingFrictionFactor;
-		CharacterMovementComp->BrakingFriction = GateSettingMap[CurrentGate].BrakingFriction;
-		CharacterMovementComp->bUseSeparateBrakingFriction = GateSettingMap[CurrentGate].bUseSeparateBrakingFriction;
+		CharacterMovementComp->MaxAcceleration = GateSetting->MaxAcceleration;
+		CharacterMovementComp->BrakingDecelerationWalking = GateSetting->BrakingDeceleration;
+		CharacterMovementComp->BrakingFrictionFactor = GateSetting->BrakingFrictionFactor;
+		CharacterMovementComp->BrakingFriction = GateSetting->BrakingFriction;
+		CharacterMovementComp->bUseSeparateBrakingFriction = GateSetting->bUseSeparateBrakingFriction;
+		if (CurrentGate == EGate::Crouching)
+		{
+			CharacterMovementComp->MaxWalkSpeedCrouched = GateSetting->MaxWalkSpeed;
+		}
+		else
+		{
+			CharacterMovementComp->MaxWalkSpeed = GateSetting->MaxWalkSpeed;
+		}
 	}
+}
+
+void ALyraALSCharacterBase::OpenWeaponFire()
+{
+	const bool bIsEquipped = GetEquippedGun() == EGuns::Rifle || GetEquippedGun() == EGuns::Pistol;
+	const bool bIsRightGate = GetCurrentGate() == EGate::Crouching || GetCurrentGate() == EGate::Walking;
+	if (bIsEquipped && bIsRightGate && bCanFire && WeaponInfo.Contains(EquippedGun))
+	{
+		bCanFire = false;
+		FWeaponInfo& Info = WeaponInfo[EquippedGun];
+		GetWorldTimerManager().SetTimer(
+			FireTimerHandle,
+			[this, Info]()
+			{
+				PlayAnimMontage(Info.CharacterFireAnim);
+				bCanFire = true;
+				GetWorldTimerManager().ClearTimer(FireTimerHandle);
+				GetCurWeapon()->PlayAnimation(Info.WeaponFireAnim, false);
+			},
+			Info.FireRate, false);
+	}
+}
+
+void ALyraALSCharacterBase::Reload()
+{
+	if (WeaponInfo.Contains(EquippedGun))
+	{
+		FWeaponInfo& Info = WeaponInfo[EquippedGun];
+
+		PlayAnimMontage(Info.CharacterReloadAnim);
+		GetCurWeapon()->PlayAnimation(Info.WeaponReloadAnim, false);
+	}
+}
+
+void ALyraALSCharacterBase::Aiming(bool bStart)
+{
+	EGate TargetGate = bStart ? EGate::Walking : EGate::Jogging;
+	if (CurrentGate == EGate::Crouching)
+	{
+		TargetGate = EGate::Crouching;
+	}
+	SwitchGate(TargetGate);
+
+	if (CameraAimingTimeline->IsPlaying())
+	{
+		CameraAimingTimeline->Stop();
+	}
+	if (bStart)
+	{
+		CameraAimingTimeline->PlayFromStart();
+	}
+	else
+	{
+		CameraAimingTimeline->ReverseFromEnd();
+	}
+}
+
+void ALyraALSCharacterBase::ChangeWeapon()
+{
+	Pistol->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, SkeletonSockets.PistolUnEquipped);
+	Rifle->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, SkeletonSockets.RifleUnEquipped);
+	switch (EquippedGun)
+	{
+		case EGuns::Pistol:
+			Pistol->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, SkeletonSockets.WeaponEquipped);
+			break;
+		case EGuns::Rifle:
+			Rifle->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, SkeletonSockets.WeaponEquipped);
+			break;
+	}
+	bCanFire = true;
+}
+
+void ALyraALSCharacterBase::UpdateGroundDistance()
+{
+	if (GetWorld() == nullptr)
+	{
+		return;
+	}
+
+	if (GetCharacterMovement()->IsFalling())
+	{
+		FHitResult OutHit;
+
+		FVector Start = GetActorLocation() - FVector(0.f, 0.f, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+		FVector End = GetActorLocation() - FVector(0.f, 0.f, 1000.f);
+		if (GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECollisionChannel::ECC_Visibility) && AnimationInterface)
+		{
+			AnimationInterface->ReceiveGroundDistance(OutHit.Distance);
+		}
+	}
+}
+
+USkeletalMeshComponent* ALyraALSCharacterBase::GetCurWeapon()
+{
+	switch (EquippedGun)
+	{
+		case EGuns::Pistol:
+			return Pistol;
+			break;
+		case EGuns::Rifle:
+			return Rifle;
+			break;
+	}
+	return nullptr;
+}
+
+FName ALyraALSCharacterBase::GetCurGateName()
+{
+	FString Res;
+
+	switch (EquippedGun)
+	{
+		case EGuns::UnArmed:
+			Res.Append("UnArmed");
+			break;
+		case EGuns::Pistol:
+			Res.Append("Pistol");
+			break;
+		case EGuns::Rifle:
+			Res.Append("Rifle");
+			break;
+	}
+	switch (CurrentGate)
+	{
+		case EGate::Walking:
+			Res.Append("Walk");
+			break;
+		case EGate::Jogging:
+			Res.Append("Jog");
+			break;
+		case EGate::Crouching:
+			Res.Append("Crouch");
+			break;
+	}
+	return FName(Res);
 }

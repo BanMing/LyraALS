@@ -46,6 +46,8 @@ void ULyraALSAnimInstanceBase::NativeThreadSafeUpdateAnimation(float DeltaSecond
 	}
 
 	UpdateGate();
+
+	UpdateJumpInfo(DeltaSeconds);
 }
 
 void ULyraALSAnimInstanceBase::ReceiveEquippedGun(EGuns InEquippedGun)
@@ -56,6 +58,11 @@ void ULyraALSAnimInstanceBase::ReceiveEquippedGun(EGuns InEquippedGun)
 void ULyraALSAnimInstanceBase::ReceiveCurrentGate(EGate InGate)
 {
 	IncomingGate = InGate;
+}
+
+void ULyraALSAnimInstanceBase::ReceiveGroundDistance(float InGroundDistance)
+{
+	IncomingGroundDistance = InGroundDistance;
 }
 
 ELocomotionDirection ULyraALSAnimInstanceBase::CalculateLocomotionDirection(
@@ -120,6 +127,18 @@ ELocomotionDirection ULyraALSAnimInstanceBase::CalculateLocomotionDirection(
 	return ELocomotionDirection::Left;
 }
 
+void ULyraALSAnimInstanceBase::OnIdleStateUpdate(const FAnimUpdateContext& UpdateContext, const FAnimNodeReference& Node)
+{
+	RootYawOffsetMode = ERootYawOffsetMode::Accumulate;
+	ProcessTurnYawCurve();
+}
+
+void ULyraALSAnimInstanceBase::SetupJumpApexPose(const FAnimUpdateContext& UpdateContext, const FAnimNodeReference& Node)
+{
+	// Fix TimeFalling over 1 when jump from higer land
+	TimeFalling = 0.f;
+}
+
 #pragma region Update Data
 
 void ULyraALSAnimInstanceBase::UpdateGate()
@@ -127,6 +146,42 @@ void ULyraALSAnimInstanceBase::UpdateGate()
 	LastFrameGate = CurrentGate;
 	CurrentGate = IncomingGate;
 	bIsGateChanged = LastFrameGate != CurrentGate;
+
+	bIsLastFrameCrouching = bIsCrouching;
+	bIsCrouching = IncomingGate == EGate::Crouching;
+	bIsCrouchStateChanged = bIsLastFrameCrouching != bIsCrouching;
+}
+
+void ULyraALSAnimInstanceBase::UpdateJumpInfo(float DeltaSeconds)
+{
+	if (CharacterMovementComp == nullptr)
+	{
+		return;
+	}
+	bIsInAir = CharacterMovementComp->IsFalling();
+	bIsJumping = CharacterVelocity.Z > 0 && bIsInAir;
+	bIsFalling = CharacterVelocity.Z < 0 && bIsInAir;
+
+	if (bIsJumping)
+	{
+		TimeToJumpApex = -CharacterVelocity.Z / CharacterMovementComp->GetGravityZ();
+	}
+	else
+	{
+		TimeToJumpApex = 0.f;
+	}
+
+	if (bIsFalling)
+	{
+		TimeFalling += DeltaSeconds;
+	}
+	else
+	{
+		if (bIsJumping)
+		{
+			TimeFalling = 0.f;
+		}
+	}
 }
 
 void ULyraALSAnimInstanceBase::UpdateLocationData()
@@ -166,6 +221,23 @@ void ULyraALSAnimInstanceBase::UpdateRotationData(float DeltaSeconds)
 	{
 		LeanAngle *= -1.f;
 	}
+
+	// Turn in place
+	if (RootYawOffsetMode == ERootYawOffsetMode::Accumulate)
+	{
+		RootYawOffset = UKismetMathLibrary::NormalizeAxis(RootYawOffset + DeltaActorYaw * -1.f);
+	}
+	else if (RootYawOffsetMode == ERootYawOffsetMode::BlendOut)
+	{
+		FFloatSpringState RootYawOffsetSpringState;
+		RootYawOffset = UKismetMathLibrary::FloatSpringInterp(RootYawOffset, 0.f, RootYawOffsetSpringState, 80.f, 1.f, DeltaSeconds);
+	}
+	RootYawOffsetMode = ERootYawOffsetMode::BlendOut;
+
+	if (APawn* Pawn = TryGetPawnOwner())
+	{
+		AimPitch = UKismetMathLibrary::NormalizeAxis(Pawn->GetBaseAimRotation().Pitch);
+	}
 }
 
 void ULyraALSAnimInstanceBase::UpdateLocomotionData()
@@ -173,6 +245,29 @@ void ULyraALSAnimInstanceBase::UpdateLocomotionData()
 	LastFrameLocomotionDirection = LocomotionDirection;
 	VelocityLocomotionAngle = UKismetAnimationLibrary::CalculateDirection(CharacterVelocity2D, WorldRotation);
 	LocomotionDirection = CalculateLocomotionDirection(VelocityLocomotionAngle, -130.f, 130.f, -50.f, 50.f, LocomotionDirection, 20.f);
+
+	AccelerationLocomotionAngle = UKismetAnimationLibrary::CalculateDirection(CurAcceleration2D, WorldRotation);
+	AccelerationLocomotionDirection = CalculateLocomotionDirection(AccelerationLocomotionAngle, -130.f, 130.f, -50.f, 50.f, AccelerationLocomotionDirection, 20.f);
+
+	VelocityLocomotionAngleWithOffset = UKismetMathLibrary::NormalizeAxis(VelocityLocomotionAngle - RootYawOffset);
+}
+
+void ULyraALSAnimInstanceBase::ProcessTurnYawCurve()
+{
+	LastFrameTurnYawCurveValue = TurnYawCurveValue;
+	const float TurningValue = GetCurveValue("IsTurning");
+	if (TurningValue < 1.0f)
+	{
+		LastFrameTurnYawCurveValue = TurnYawCurveValue = 0;
+	}
+	else
+	{
+		TurnYawCurveValue = GetCurveValue("root_rotation_Z") * TurningValue;
+		if (LastFrameTurnYawCurveValue != 0.f)
+		{
+			RootYawOffset = UKismetMathLibrary::NormalizeAxis(RootYawOffset - (TurnYawCurveValue - LastFrameTurnYawCurveValue));
+		}
+	}
 }
 
 #pragma endregion
@@ -189,15 +284,16 @@ void ULyraALSAnimInstanceBase::Debug()
 
 	if (DebugOptions.bShowLocomotionData)
 	{
-		DebugDrawVector("Velocity", CharacterVelocity, FColor::Green);
-		DebugPrintFloat("Velocity", CharacterVelocity2D.Length(), 1232, FColor::Green);
+		DebugDrawVector("CharacterVelocity", CharacterVelocity, FColor::Green);
+		DebugPrintFloat("CharacterVelocity2D", CharacterVelocity2D.Length(), 1232, FColor::Green);
 		DebugPrintFloat("Velocity Locomotion Angle", VelocityLocomotionAngle, 1233, FColor::Yellow);
 		DebugPrintString("Locomotion Direction", StaticEnum<ELocomotionDirection>()->GetNameStringByValue((int32) LocomotionDirection), 1234, FColor::Blue);
 		DebugPrintString("Last Frame Locomotion Direction", StaticEnum<ELocomotionDirection>()->GetNameStringByValue((int32) LastFrameLocomotionDirection), 1237, FColor::Blue);
 		DebugPrintFloat("Locomotion Direction", LeanAngle, 1235, FColor::Red);
 
 		DebugDrawVector("Acceleration", CurAcceleration2D, FColor::Blue);
-		DebugPrintFloat("Acceleration", CharacterVelocity2D.Length(), 1236, FColor::Blue);
+		DebugDrawVector("PivotAcceleration2D", PivotAcceleration2D, FColor::Yellow);
+		DebugPrintFloat("PivotAcceleration2D", PivotAcceleration2D.Length(), 1236, FColor::Blue);
 	}
 
 	if (DebugOptions.bShowDistanceMatching && CharacterMovementComp)
@@ -206,6 +302,17 @@ void ULyraALSAnimInstanceBase::Debug()
 			CharacterMovementComp->GroundFriction, CharacterMovementComp->BrakingDecelerationWalking, CharacterMovementComp->BrakingDecelerationWalking);
 		const FVector Center = StopLocation + WorldLocation;
 		UKismetSystemLibrary::DrawDebugCapsule(GetWorld(), Center, 44.f, 20.f, WorldRotation, FLinearColor::Green, 0.f, 2.f);
+	}
+
+	if (DebugOptions.bShowRootYawOffset)
+	{
+		DebugPrintString("Root Yaw Offset Mode", StaticEnum<ERootYawOffsetMode>()->GetNameStringByValue((int32) RootYawOffsetMode), 1238, FColor::Green);
+		DebugPrintFloat("RootYawOffset", RootYawOffset, 1239, FColor::Yellow);
+	}
+
+	if (DebugOptions.bShowJumpData)
+	{
+		DebugPrintFloat("Time Falling", TimeFalling, 1240, FColor::Blue);
 	}
 }
 
@@ -226,6 +333,7 @@ void ULyraALSAnimInstanceBase::DebugDrawVector(FString Name, FVector Value, FCol
 	UKismetSystemLibrary::DrawDebugArrow(GetWorld(), Start, Target, 5.0, DisplayColor, 0, 3);
 	UKismetSystemLibrary::DrawDebugString(GetWorld(), Target, Name, nullptr, DisplayColor);
 }
+
 #endif	  // UE_BUILD_SHIPPING
 
 #pragma endregion

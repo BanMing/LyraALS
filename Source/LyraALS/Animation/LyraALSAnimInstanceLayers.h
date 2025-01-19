@@ -5,7 +5,10 @@
 #include "Animation/AnimInstance.h"
 #include "CoreMinimal.h"
 #include "Enums/ELocomotionDirection.h"
+#include "Struct/CrouchAnimations.h"
 #include "Struct/DirectionalAnimations.h"
+#include "Struct/JumpAnimations.h"
+#include "Struct/TurnInPlaceAnimations.h"
 
 #include "LyraALSAnimInstanceLayers.generated.h"
 
@@ -31,6 +34,9 @@ public:
 
 protected:
 	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
+	void SetupStanceTransitionAnims(const FAnimUpdateContext& UpdateContext, const FAnimNodeReference& Node);
+
+	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
 	void OnIdleUpdate(const FAnimUpdateContext& UpdateContext, const FAnimNodeReference& Node);
 
 	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
@@ -47,6 +53,27 @@ protected:
 
 	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
 	void OnStartUpdate(const FAnimUpdateContext& UpdateContext, const FAnimNodeReference& Node);
+
+	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
+	void SetupPivotAnims(const FAnimUpdateContext& UpdateContext, const FAnimNodeReference& Node);
+
+	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
+	void OnPivotUpdate(const FAnimUpdateContext& UpdateContext, const FAnimNodeReference& Node);
+
+	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
+	void SetupTurnInPlaceEntryState(const FAnimUpdateContext& UpdateContext, const FAnimNodeReference& Node);
+
+	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
+	void SetupTurnInPlaceEntryAnims(const FAnimUpdateContext& UpdateContext, const FAnimNodeReference& Node);
+
+	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
+	void UpdateTurnInPlaceEntryAnims(const FAnimUpdateContext& UpdateContext, const FAnimNodeReference& Node);
+
+	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
+	void SetupJumpFallLandAnims(const FAnimUpdateContext& UpdateContext, const FAnimNodeReference& Node);
+	
+	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
+	void UpdateJumpFallLandAnims(const FAnimUpdateContext& UpdateContext, const FAnimNodeReference& Node);
 
 private:
 	UAnimSequenceBase* GetSequence(const FDirectionalAnimations& DirectionalAnimations, ELocomotionDirection LocomotionDirection);
@@ -72,6 +99,51 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Start")
 	FDirectionalAnimations JogStartAnimations;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Pivot")
+	FDirectionalAnimations WalkPivotAnimations;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Pivot")
+	FDirectionalAnimations JogPivotAnimations;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Turn")
+	FTurnInPlaceAnimations TurnInPlaceAnimations;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Turn")
+	bool bShouldTurnLeft;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Turn")
+	float TurnInPlaceTime;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Turn")
+	TObjectPtr<UAnimSequenceBase> FinalTurnAnimation;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crouch")
+	FCrouchAnimations CrouchAnimations;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crouch")
+	FDirectionalAnimations CrouchStartAnimations;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crouch")
+	FDirectionalAnimations CrouchPivotAnimations;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crouch")
+	FDirectionalAnimations CrouchDirectionalAnimations;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crouch")
+	FDirectionalAnimations CrouchStopAnimations;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crouch")
+	FTurnInPlaceAnimations CrouchTurnInPlaceAnimations;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Jump")
+	FJumpAnimations JumpAnimations;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Aim Offset")
+	TObjectPtr<UBlendSpace> AOStandUp;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Aim Offset")
+	TObjectPtr<UBlendSpace> AOCrouch;
 
 protected:
 	TObjectPtr<class ULyraALSAnimInstanceBase> BaseAnimInstance;

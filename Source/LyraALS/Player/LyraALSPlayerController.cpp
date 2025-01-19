@@ -37,6 +37,11 @@ void ALyraALSPlayerController::SetupInputComponent()
 	EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ThisClass::OnMoveInput);
 	EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &ThisClass::OnAimStartInput);
 	EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &ThisClass::OnAimEndInput);
+	EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &ThisClass::OnCrouchInput);
+	EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ThisClass::OnStartJumpInput);
+	EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ThisClass::OnEndJumpInput);
+	EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &ThisClass::OnFireInput);
+	EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Started, this, &ThisClass::OnReloadInput);
 }
 
 void ALyraALSPlayerController::OnSwitchWeaponInput(const FInputActionValue& InputActionValue)
@@ -70,10 +75,44 @@ void ALyraALSPlayerController::OnMoveInput(const FInputActionValue& InputActionV
 
 void ALyraALSPlayerController::OnAimStartInput(const FInputActionValue& InputActionValue)
 {
-	LyraALSCharacterBase->SwitchGate(EGate::Walking);
+	LyraALSCharacterBase->Aiming(true);
 }
 
 void ALyraALSPlayerController::OnAimEndInput(const FInputActionValue& InputActionValue)
 {
-	LyraALSCharacterBase->SwitchGate(EGate::Jogging);
+	LyraALSCharacterBase->Aiming(false);
+}
+
+void ALyraALSPlayerController::OnCrouchInput(const FInputActionValue& InputActionValue)
+{
+	switch (LyraALSCharacterBase->GetCurrentGate())
+	{
+		case EGate::Walking:
+		case EGate::Jogging:
+			LyraALSCharacterBase->SwitchGate(EGate::Crouching);
+			break;
+		case EGate::Crouching:
+			LyraALSCharacterBase->SwitchGate(EGate::Jogging);
+			break;
+	}
+}
+
+void ALyraALSPlayerController::OnStartJumpInput(const FInputActionValue& InputActionValue)
+{
+	LyraALSCharacterBase->Jump();
+}
+
+void ALyraALSPlayerController::OnEndJumpInput(const FInputActionValue& InputActionValue)
+{
+	LyraALSCharacterBase->StopJumping();
+}
+
+void ALyraALSPlayerController::OnFireInput(const FInputActionValue& InputActionValue)
+{
+	LyraALSCharacterBase->OpenWeaponFire();
+}
+
+void ALyraALSPlayerController::OnReloadInput(const FInputActionValue& InputActionValue)
+{
+	LyraALSCharacterBase->Reload();
 }

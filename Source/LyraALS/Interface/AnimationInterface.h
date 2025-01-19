@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Enums/EGuns.h"
 #include "Enums/EGate.h"
+#include "Enums/EGuns.h"
 #include "UObject/Interface.h"
 
 #include "AnimationInterface.generated.h"
@@ -27,4 +27,5 @@ class LYRAALS_API IAnimationInterface
 public:
 	virtual void ReceiveEquippedGun(EGuns InEquipedGun) = 0;
 	virtual void ReceiveCurrentGate(EGate InGate) = 0;
+	virtual void ReceiveGroundDistance(float InGroundDistance) = 0;
 };

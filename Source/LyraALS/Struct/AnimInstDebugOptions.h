@@ -19,4 +19,10 @@ struct FAnimInstDebugOptions
 
 	UPROPERTY(EditAnywhere)
 	bool bShowDistanceMatching = false;
+
+	UPROPERTY(EditAnywhere)
+	bool bShowRootYawOffset = false;
+
+	UPROPERTY(EditAnywhere)
+	bool bShowJumpData = false;
 };
