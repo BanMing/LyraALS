@@ -9,6 +9,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Interface/AnimationInterface.h"
+#include "Kismet/GameplayStatics.h"
 #include "Struct/GateSetting.h"
 
 ALyraALSCharacterBase::ALyraALSCharacterBase()
@@ -43,7 +44,7 @@ void ALyraALSCharacterBase::BeginPlay()
 	CameraAimingTimeline->SetTimelineLengthMode(ETimelineLengthMode::TL_LastKeyFrame);
 
 	FOnTimelineFloatStatic LerpAimingCameraFunc;
-	LerpAimingCameraFunc.BindLambda([this](float Alpha) { SpringArm->TargetArmLength = FMath::Lerp(500.f, 400.f, Alpha); });
+	LerpAimingCameraFunc.BindLambda([this](float Alpha) { SpringArm->TargetArmLength = FMath::Lerp(400.f, 200.f, Alpha); });
 	CameraAimingTimeline->AddInterpFloat(AimingTimelineCurve, LerpAimingCameraFunc);
 }
 
@@ -116,14 +117,22 @@ void ALyraALSCharacterBase::OpenWeaponFire()
 	{
 		bCanFire = false;
 		FWeaponInfo& Info = WeaponInfo[EquippedGun];
+		PlayAnimMontage(Info.CharacterFireAnim);
+		GetCurWeapon()->PlayAnimation(Info.WeaponFireAnim, false);
+
 		GetWorldTimerManager().SetTimer(
 			FireTimerHandle,
 			[this, Info]()
 			{
-				PlayAnimMontage(Info.CharacterFireAnim);
 				bCanFire = true;
 				GetWorldTimerManager().ClearTimer(FireTimerHandle);
-				GetCurWeapon()->PlayAnimation(Info.WeaponFireAnim, false);
+				FHitResult OutHit;
+
+				if (FireLineTrace(OutHit))
+				{
+					UGameplayStatics::PlaySoundAtLocation(this, Info.ImpactPlasterSound, OutHit.ImpactPoint);
+					UGameplayStatics::PlaySoundAtLocation(this, Info.ImpactPlasterDebrisSound, OutHit.ImpactPoint);
+				}
 			},
 			Info.FireRate, false);
 	}
@@ -242,4 +251,11 @@ FName ALyraALSCharacterBase::GetCurGateName()
 			break;
 	}
 	return FName(Res);
+}
+
+bool ALyraALSCharacterBase::FireLineTrace(FHitResult& OutHit)
+{
+	FVector Start = Camera->GetComponentLocation();
+	FVector End = Camera->GetForwardVector() * 500000.f;
+	return GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECollisionChannel::ECC_Visibility);
 }

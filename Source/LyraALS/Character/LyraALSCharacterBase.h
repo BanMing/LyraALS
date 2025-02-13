@@ -56,6 +56,7 @@ protected:
 	void UpdateGroundDistance();
 	USkeletalMeshComponent* GetCurWeapon();
 	FName GetCurGateName();
+	bool FireLineTrace(FHitResult& OutHit);
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapons")
