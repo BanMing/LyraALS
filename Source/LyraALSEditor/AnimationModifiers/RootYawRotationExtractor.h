@@ -5,13 +5,13 @@
 #include "AnimationModifier.h"
 #include "CoreMinimal.h"
 
-#include "IsTurningModifier.generated.h"
+#include "RootYawRotationExtractor.generated.h"
 
 /**
  *
  */
 UCLASS()
-class LYRAALS_API UIsTurningModifier : public UAnimationModifier
+class LYRAALSEDITOR_API URootYawRotationExtractor : public UAnimationModifier
 {
 	GENERATED_BODY()
 

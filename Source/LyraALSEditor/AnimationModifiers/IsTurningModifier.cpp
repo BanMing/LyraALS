@@ -1,6 +1,6 @@
 // Copyright BanMing
 
-#include "Animation/Modifier/IsTurningModifier.h"
+#include "IsTurningModifier.h"
 
 void UIsTurningModifier::OnApply_Implementation(UAnimSequence* Animation)
 {

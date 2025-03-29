@@ -1,5 +1,5 @@
 // Copyright BanMing
-#include "Animation/Modifier/RootYawRotationExtractor.h"
+#include "RootYawRotationExtractor.h"
 
 #include "MotionExtractorUtilities.h"
 

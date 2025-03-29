@@ -12,7 +12,13 @@
 				"Engine",
 				"AnimationModifiers"
 			]
+		},
+		{
+			"Name": "LyraALSEditor",
+			"Type": "UncookedOnly",
+			"LoadingPhase": "Default"
 		}
+
 	],
 	"Plugins": [
 		{
